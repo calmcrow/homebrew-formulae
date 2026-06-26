@@ -1,0 +1,127 @@
+diff --git a/src/class/fileaccesscheck.cpp b/src/class/fileaccesscheck.cpp
+index 06ddc29..db7a6d5 100644
+--- a/src/class/fileaccesscheck.cpp
++++ b/src/class/fileaccesscheck.cpp
+@@ -22,13 +22,16 @@
+ #include <windows.h>
+ #endif
+ 
+-#ifdef Q_OS_LINUX
++#if defined(Q_OS_LINUX)
+ #include <QDBusArgument>
+ #include <QDBusConnection>
+ #include <QDBusInterface>
+ #include <QDBusReply>
+ #include <QDBusVariant>
++#endif
+ 
++#if defined(Q_OS_LINUX) || defined(Q_OS_MAC)
++#include <QFile>
+ #include <grp.h>
+ #include <pwd.h>
+ #include <sys/wait.h>
+@@ -250,7 +253,7 @@ bool FileAccessCheck::canStandardUserWriteFile(const QString &filePath) {
+     LocalFree(pSD);
+     CloseHandle(hAccessToken);
+     return accessCheckResult && accessStatus;
+-#else
++#elif defined(Q_OS_LINUX)
+     auto path = filePath.toUtf8();
+     if (geteuid() != 0) {
+         return access(path, W_OK) == 0;
+@@ -288,5 +291,8 @@ bool FileAccessCheck::canStandardUserWriteFile(const QString &filePath) {
+         waitpid(pid, &status, 0);
+         return (WIFEXITED(status) && WEXITSTATUS(status) == 0);
+     }
++#else
++    auto path = QFile::encodeName(filePath);
++    return ::access(path.constData(), W_OK) == 0;
+ #endif
+ }
+diff --git a/src/class/framelesshelper.cpp b/src/class/framelesshelper.cpp
+index f99431a..3db6042 100644
+--- a/src/class/framelesshelper.cpp
++++ b/src/class/framelesshelper.cpp
+@@ -75,10 +75,12 @@ FramelessHelper::FramelessHelper(QWidget *parent, bool isDialog)
+     windowAgent->setSystemButton(QWK::WindowAgentBase::Close, closeButton);
+ #endif
+ 
++#ifndef Q_OS_MAC
+     if (isDialog) {
+         minButton->hide();
+         maxButton->hide();
+     }
++#endif
+ 
+     windowAgent->setHitTestVisible(m_windowBar, false);
+ 
+diff --git a/src/control/hexlineedit.cpp b/src/control/hexlineedit.cpp
+index 3f1a7a5..1508118 100644
+--- a/src/control/hexlineedit.cpp
++++ b/src/control/hexlineedit.cpp
+@@ -29,8 +29,8 @@ HexLineEdit::HexLineEdit(QWidget *parent)
+       m_isUndoing(false), m_isRedoing(false), m_mergeEnabled(true) {
+     // monospace looks nicer for hex
+     QFont f = font();
+-    f.setFamily("Monospace");
+     f.setStyleHint(QFont::Monospace);
++    f.setFixedPitch(true);
+     setFont(f);
+ 
+     setAttribute(Qt::WA_InputMethodEnabled, false);
+diff --git a/src/dialog/framelessdialogbase.cpp b/src/dialog/framelessdialogbase.cpp
+index d78392d..c131c4f 100644
+--- a/src/dialog/framelessdialogbase.cpp
++++ b/src/dialog/framelessdialogbase.cpp
+@@ -56,10 +56,11 @@ void FramelessDialogBase::buildUpContent(QWidget *content) {
+         auto titlebar = _helper->windowBar();
+         auto iconBtn =
+             qobject_cast<QWK::WindowButton *>(titlebar->iconButton());
+-        Q_ASSERT(iconBtn);
+-        iconBtn->setIconNormal(this->windowIcon());
+-        connect(this, &FramelessDialogBase::windowIconChanged, iconBtn,
+-                &QWK::WindowButton::setIconNormal);
++        if (iconBtn) {
++            iconBtn->setIconNormal(this->windowIcon());
++            connect(this, &FramelessDialogBase::windowIconChanged, iconBtn,
++                    &QWK::WindowButton::setIconNormal);
++        }
+ 
+         vLayout->addWidget(titlebar);
+     }
+diff --git a/src/dialog/framelessmainwindow.cpp b/src/dialog/framelessmainwindow.cpp
+index 81e4763..92e6bc3 100644
+--- a/src/dialog/framelessmainwindow.cpp
++++ b/src/dialog/framelessmainwindow.cpp
+@@ -40,10 +40,11 @@ void FramelessMainWindow::buildUpContent(QWidget *content) {
+         auto titlebar = _helper->windowBar();
+         auto iconBtn =
+             qobject_cast<QWK::WindowButton *>(titlebar->iconButton());
+-        Q_ASSERT(iconBtn);
+-        iconBtn->setIconNormal(this->windowIcon());
+-        connect(this, &FramelessMainWindow::windowIconChanged, iconBtn,
+-                &QWK::WindowButton::setIconNormal);
++        if (iconBtn) {
++            iconBtn->setIconNormal(this->windowIcon());
++            connect(this, &FramelessMainWindow::windowIconChanged, iconBtn,
++                    &QWK::WindowButton::setIconNormal);
++        }
+ 
+         setMenuWidget(titlebar);
+     }
+diff --git a/src/settings/qeditconfig.ui b/src/settings/qeditconfig.ui
+index 282e996..103336b 100644
+--- a/src/settings/qeditconfig.ui
++++ b/src/settings/qeditconfig.ui
+@@ -94,11 +94,6 @@
+       </item>
+       <item row="1" column="1">
+        <widget class="QFontComboBox" name="cbFont">
+-        <property name="font">
+-         <font>
+-          <family>Monospace</family>
+-         </font>
+-        </property>
+         <property name="currentFont">
+          <font>
+           <family>Noto Sans CJK SC</family>
