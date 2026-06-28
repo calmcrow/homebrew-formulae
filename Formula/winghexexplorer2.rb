@@ -2,7 +2,7 @@ class Winghexexplorer2 < Formula
   desc "A powerful hex editor with scripting support"
   homepage "https://github.com/Wing-summer/WingHexExplorer2"
   license "AGPL-3.0"
-  version "2.3.7.2"
+  version "2.3.7.3"
   url "https://github.com/Wing-summer/WingHexExplorer2.git",
       using: :git,
       revision: "b0ee4db659578296d63211f49a4cb3f6134549a0"
@@ -18,7 +18,7 @@ class Winghexexplorer2 < Formula
 
   patch do
     url "file://#{File.expand_path("winghexexplorer2-macos-compat.patch", __dir__)}"
-    sha256 "8e5e82ca93df548f9f77afd339af26d5e62a6bec979aa7b7059ad2c021bd23b2"
+    sha256 "5a112a11b42de22a95f27875e6adb1fab54f4b36e85a8da39736323fb8c2a23f"
   end
 
   def install
@@ -28,11 +28,6 @@ class Winghexexplorer2 < Formula
     inreplace "CMakeLists.txt",
               "    elseif(APPLE)\r\n        set(PKG_TARGET \"node18-macos-x64\")",
               "    elseif(APPLE)\r\n        if(NOT PKG_TARGET)\r\n            set(PKG_TARGET \"node18-macos-x64\")\r\n        endif()"
-
-    inreplace "3rdparty/QHexView/qhexview.cpp" do |s|
-      s.sub! 'f.setFamily(QStringLiteral("Monospace")); // Force Monospaced font', ""
-      s.sub! 'f.setFamily("Monospace"); // Force Monospaced font', ""
-    end
 
     system "cmake", "-S", ".", "-B", "build",
            "-G", "Ninja",

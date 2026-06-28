@@ -53,7 +53,7 @@ macOS 标题栏无窗口图标，`iconButton()` 返回 `nullptr`。改为 `if (i
 
 #### 5. 3rdparty/QHexView/qhexview.cpp
 
-同上（子模块文件，无法纳入 patch 文件，通过 `inreplace` 在 `install` 中处理）。
+同上，删除 `f.setFamily("Monospace")`。
 
 ### 编译参数
 

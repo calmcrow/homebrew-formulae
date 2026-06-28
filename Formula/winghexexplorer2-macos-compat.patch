@@ -1,8 +1,8 @@
 diff --git a/src/class/fileaccesscheck.cpp b/src/class/fileaccesscheck.cpp
-index 06ddc29..db7a6d5 100644
+index 06ddc29..0fe978d 100644
 --- a/src/class/fileaccesscheck.cpp
 +++ b/src/class/fileaccesscheck.cpp
-@@ -22,13 +22,16 @@
+@@ -22,15 +22,19 @@
  #include <windows.h>
  #endif
  
@@ -19,8 +19,11 @@ index 06ddc29..db7a6d5 100644
 +#include <QFile>
  #include <grp.h>
  #include <pwd.h>
++#include <sys/stat.h>
  #include <sys/wait.h>
-@@ -250,7 +253,7 @@ bool FileAccessCheck::canStandardUserWriteFile(const QString &filePath) {
+ #include <unistd.h>
+ #endif
+@@ -250,7 +254,7 @@ bool FileAccessCheck::canStandardUserWriteFile(const QString &filePath) {
      LocalFree(pSD);
      CloseHandle(hAccessToken);
      return accessCheckResult && accessStatus;
@@ -29,13 +32,20 @@ index 06ddc29..db7a6d5 100644
      auto path = filePath.toUtf8();
      if (geteuid() != 0) {
          return access(path, W_OK) == 0;
-@@ -288,5 +291,8 @@ bool FileAccessCheck::canStandardUserWriteFile(const QString &filePath) {
+@@ -288,5 +292,15 @@ bool FileAccessCheck::canStandardUserWriteFile(const QString &filePath) {
          waitpid(pid, &status, 0);
          return (WIFEXITED(status) && WEXITSTATUS(status) == 0);
      }
 +#else
 +    auto path = QFile::encodeName(filePath);
-+    return ::access(path.constData(), W_OK) == 0;
++    if (geteuid() != 0) {
++        return ::access(path.constData(), W_OK) == 0;
++    }
++    struct stat st;
++    if (stat(path.constData(), &st) != 0) {
++        return false;
++    }
++    return (st.st_mode & (S_IWGRP | S_IWOTH)) != 0;
  #endif
  }
 diff --git a/src/class/framelesshelper.cpp b/src/class/framelesshelper.cpp
@@ -125,3 +135,23 @@ index 282e996..103336b 100644
          <property name="currentFont">
           <font>
            <family>Noto Sans CJK SC</family>
+diff --git a/3rdparty/QHexView/qhexview.cpp b/3rdparty/QHexView/qhexview.cpp
+index 43366ce..3fee4c2 100644
+--- a/3rdparty/QHexView/qhexview.cpp
++++ b/3rdparty/QHexView/qhexview.cpp
+@@ -96,7 +96,6 @@ bool QHexView::isSaved() { return m_document->isDocSaved(); }
+ QFont QHexView::getHexeditorFont() {
+     QFont f = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+     if (f.styleHint() != QFont::TypeWriter) {
+-        f.setFamily(QStringLiteral("Monospace")); // Force Monospaced font
+         f.setStyleHint(QFont::TypeWriter);
+     }
+     return f;
+@@ -173,7 +172,6 @@ QHexView::QHexView(QWidget *parent)
+     QFont f = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+ 
+     if (f.styleHint() != QFont::TypeWriter) {
+-        f.setFamily("Monospace"); // Force Monospaced font
+         f.setStyleHint(QFont::TypeWriter);
+         f.setStyleHint(QFont::Monospace);
+     }
